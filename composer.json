@@ -1,0 +1,21 @@
+{
+  "autoload" : {
+    "psr-4" : {
+      "BMarwell\\Webtrees-recentchangesmail\\" : "src"
+    }
+  },
+  "name" : "BMarwell/webtrees-recentchangesmail",
+  "type" : "RECENTCHANGESMAIL",
+  "description" : "Mail to all members about recent changes.",
+  "license" : "GPLv3",
+  "require" : {
+    "php" : ">=5.4",
+    "fisharebest/webtrees" : "1.7.2"
+  },
+  "authors" : [{
+    "name" : "Benjamin Marwell",
+    "email" : "bmarwell@gmail.com",
+    "homepage" : "http://www.bmarwell.de/"
+  }
+  ]
+}
