@@ -20,10 +20,9 @@ use Fisharebest\webtrees\Auth;
 
 use Composer\Autoload\ClassLoader;
 use Fisharebest\Webtrees\Filter;
-use Fisharebest\Webtrees\Menu;
+use Fisharebest\Webtrees\Functions\FunctionsDb;
 use Fisharebest\Webtrees\Module\AbstractModule;
 use Fisharebest\Webtrees\Module\ModuleConfigInterface;
-use Fisharebest\Webtrees\Module\ModuleMenuInterface;
 
 /**
  * Class RecentChangesMail
@@ -91,6 +90,76 @@ class RecentChangesMail extends AbstractModule implements ModuleConfigInterface 
      */
     public function getConfigLink() {
         return 'module.php?mod=' . $this->getName () . '&amp;mod_action=admin_config';
+    }
+
+    /**
+     * Returns the last changes for 1 day.
+     *
+     * @return \string[]
+     */
+    public function getRecentChanges() {
+        // TODO: Make configurable.
+        $days = 1;
+        $found_facts = FunctionsDb::getRecentChanges(WT_CLIENT_JD - $days);
+
+        return $found_facts;
+    }
+
+    /**
+     * Returns the changeset as plain text.
+     *
+     * @param $found_facts
+     * @return string
+     */
+    public function getRecentChangesAsHtml() {
+        // TODO: Refactor this code taken from RecentChangesModule.
+        global $WT_TREE;
+        $sort = "date_desc";
+
+        $found_facts = $this->getRecentChanges();
+
+        $n   = 0;
+        $arr = array();
+        foreach ($found_facts as $change_id) {
+            $record = GedcomRecord::getInstance($change_id, $WT_TREE);
+            if (!$record || !$record->canShow()) {
+                continue;
+            }
+            // setup sorting parameters
+            $arr[$n]['record'] = $record;
+            $arr[$n]['jd']     = ($sort == 'name') ? 1 : $n;
+            $arr[$n]['anniv']  = $record->lastChangeTimestamp(true);
+            $arr[$n++]['fact'] = $record->getSortName(); // in case two changes have same timestamp
+        }
+
+        uasort($arr, '\Fisharebest\Webtrees\Functions\Functions::eventSort');
+        $arr = array_reverse($arr);
+
+        $mailtext = '';
+        foreach ($arr as $value) {
+            $mailtext .= '<a href="' . $value['record']->getHtmlUrl() . '" class="list_item name2">' . $value['record']->getFullName() . '</a>';
+            $mailtext .= '<div class="indent" style="margin-bottom: 5px;">';
+            if ($value['record'] instanceof Individual) {
+                if ($value['record']->getAddName()) {
+                    $mailtext .= '<a href="' . $value['record']->getHtmlUrl() . '" class="list_item">' . $value['record']->getAddName() . '</a>';
+                }
+            }
+            $mailtext .= /* I18N: [a record was] Changed on <date/time> by <user> */
+                I18N::translate('Changed on %1$s by %2$s', $value['record']->lastChangeTimestamp(), Filter::escapeHtml($value['record']->lastChangeUser()));
+            $mailtext .= '</div>';
+        }
+
+        return $mailtext;
+    }
+
+    public function getMailText() {
+        // TODO: Translate
+        $mailtext = "The following changes were made:\n\n";
+        $mailtext .= $this->getRecentChangesAsHtml();
+
+        // TODO: add link
+
+        return $mailtext;
     }
 
 }
